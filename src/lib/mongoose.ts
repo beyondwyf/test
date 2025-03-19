@@ -25,8 +25,12 @@ if (!cached.mongoose) {
 }
 
 async function dbConnect() {
-  if (cached.mongoose.conn) {
+  if (cached.mongoose && cached.mongoose.conn) {
     return cached.mongoose.conn;
+  }
+
+  if (!cached.mongoose) {
+    cached.mongoose = { conn: null, promise: null };
   }
 
   if (!cached.mongoose.promise) {
@@ -36,6 +40,7 @@ async function dbConnect() {
 
     cached.mongoose.promise = mongoose.connect(MONGODB_URI, opts);
   }
+  
   cached.mongoose.conn = await cached.mongoose.promise;
   return cached.mongoose.conn;
 }
