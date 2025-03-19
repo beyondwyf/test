@@ -13,7 +13,12 @@ if (!MONGODB_URI) {
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
-let cached = global as any;
+const cached = global as {
+  mongoose?: {
+    conn: typeof mongoose | null;
+    promise: Promise<typeof mongoose> | null;
+  };
+};
 
 if (!cached.mongoose) {
   cached.mongoose = { conn: null, promise: null };

@@ -3,8 +3,15 @@
 import { useState } from 'react';
 import Image from 'next/image';
 
+interface Item {
+  _id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+}
+
 export default function Home() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
