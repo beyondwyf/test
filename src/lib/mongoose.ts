@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI as string;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error(
@@ -13,35 +13,33 @@ if (!MONGODB_URI) {
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
-const cached = global as {
-  mongoose?: {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
-  };
-};
+let cached = global as any;
 
 if (!cached.mongoose) {
   cached.mongoose = { conn: null, promise: null };
 }
 
 async function dbConnect() {
-  if (cached.mongoose && cached.mongoose.conn) {
+  if (cached.mongoose.conn) {
     return cached.mongoose.conn;
-  }
-
-  if (!cached.mongoose) {
-    cached.mongoose = { conn: null, promise: null };
   }
 
   if (!cached.mongoose.promise) {
     const opts = {
-      bufferCommands: false,
+      bufferCommands: true,
+      maxPoolSize: 10,
     };
 
     cached.mongoose.promise = mongoose.connect(MONGODB_URI, opts);
   }
-  
-  cached.mongoose.conn = await cached.mongoose.promise;
+
+  try {
+    cached.mongoose.conn = await cached.mongoose.promise;
+  } catch (e) {
+    cached.mongoose.promise = null;
+    throw e;
+  }
+
   return cached.mongoose.conn;
 }
 

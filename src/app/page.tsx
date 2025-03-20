@@ -10,29 +10,76 @@ interface Item {
   createdAt: string;
 }
 
+interface Modal {
+  show: boolean;
+  message: string;
+  type: 'success' | 'error';
+}
+
 export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [modal, setModal] = useState<Modal>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, show: false }));
+  };
 
   const fetchData = async () => {
     setLoading(true);
-    setError('');
     
     try {
-      const response = await fetch('/api/items');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
+      console.log('开始发送请求...');
+      const response = await fetch("/api/items");
+      console.log('收到响应:', response.status);
       
       const data = await response.json();
-      setItems(data.items);
+      console.log('解析数据:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || '数据获取失败');
+      }
+      
+      setItems(data);
+      setModal({
+        show: true,
+        message: `数据库连接成功！获取到 ${data.length} 条数据。`,
+        type: 'success'
+      });
     } catch (err) {
-      console.error('Error fetching data:', err);
-      setError('Failed to load data from MongoDB. Please check your connection.');
+      console.error("请求错误:", err);
+      setModal({
+        show: true,
+        message: err instanceof Error 
+          ? `连接失败: ${err.message}` 
+          : '连接失败: 未知错误',
+        type: 'error'
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const testConnection = async () => {
+    try {
+      const response = await fetch('/api/test-connection');
+      const data = await response.json();
+      
+      setModal({
+        show: true,
+        message: data.message,
+        type: data.status === 'success' ? 'success' : 'error'
+      });
+    } catch (error) {
+      setModal({
+        show: true,
+        message: '连接测试失败',
+        type: 'error'
+      });
     }
   };
 
@@ -68,16 +115,41 @@ export default function Home() {
             MongoDB Connection Example
           </h2>
           
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50"
-          >
-            {loading ? 'Loading...' : 'Fetch Data from MongoDB'}
-          </button>
+          <div className="space-y-4">
+            <button
+              onClick={testConnection}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
+            >
+              测试数据库连接
+            </button>
+            
+            <button
+              onClick={fetchData}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+              disabled={loading}
+            >
+              {loading ? "加载中..." : "从 MongoDB 获取数据"}
+            </button>
+          </div>
           
-          {error && (
-            <p className="mt-4 text-red-500">{error}</p>
+          {/* 模态窗口 */}
+          {modal.show && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                <div className={`text-lg mb-4 ${
+                  modal.type === 'success' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {modal.type === 'success' ? '✅ ' : '❌ '}
+                  {modal.message}
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
           )}
           
           {items.length > 0 ? (
@@ -95,7 +167,7 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-          ) : items.length === 0 && !loading && !error ? (
+          ) : items.length === 0 && !loading && !modal.show ? (
             <p className="mt-4 text-gray-500">No items found. Your database might be empty.</p>
           ) : null}
         </div>
